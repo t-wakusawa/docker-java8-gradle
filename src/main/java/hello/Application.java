@@ -32,7 +32,7 @@ public class Application {
     public ResponseEntity<Map<String, String>> home() {
         Map<String, String> body = new HashMap<>();
         body.put("Status", "Success");
-        body.put("Message", "Books REST API");
+        body.put("Message", "Books REST API v2");
         return createResponse(body);
     }
 
