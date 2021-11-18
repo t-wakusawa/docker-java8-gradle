@@ -1,0 +1,22 @@
+version: 0.2
+
+phases:
+  pre_build:
+    commands:
+      - AWS_ACCOUNT_ID=${CODEBUILD_BUILD_ARN} && IFS=':' && set -- $AWS_ACCOUNT_ID && AWS_ACCOUNT_ID=$5
+      - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
+      - IMAGE_URL=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME
+      - COMMIT_HASH=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1-7)
+      - IMAGE_TAG=${COMMIT_HASH:=deploy}
+  build:
+    commands:
+      - ./gradlew build
+      - docker build -t $IMAGE_URL:latest .
+      - docker tag $IMAGE_URL:latest $IMAGE_URL:$IMAGE_TAG
+  post_build:
+    commands:
+      - docker push $IMAGE_URL:latest
+      - docker push $IMAGE_URL:$IMAGE_TAG
+      - printf '[{"name":"%s","imageUri":"%s"}]' $IMAGE_REPO_NAME $IMAGE_URL:$IMAGE_TAG > imagedefinitions.json
+artifacts:
+  files: imagedefinitions.json
